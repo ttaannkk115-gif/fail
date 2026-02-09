@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Master Cloud Ultra v8.2 Pro</title>
+    <title>Master Cloud Ultra v8.2 Pro Max</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
@@ -16,7 +16,6 @@
         .matrix { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 15px; width: 100%; }
         @media (min-width: 768px) { .matrix { grid-template-columns: 1fr 1fr; } }
         
-        /* Квадранты */
         .quadrant { display: flex; flex-direction: column; padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; height: 450px; position: relative; overflow: hidden; transition: background 0.2s; }
         .quadrant.drag-over { background: #1a1a1a; border-style: dashed; }
         .q1 { border-color: #ff4d4d; } .q2 { border-color: #007bff; }
@@ -33,7 +32,6 @@
         .matrix textarea { resize: none; min-height: 60px; font-size: 14px; }
         button { cursor: pointer; border: none; border-radius: 10px; padding: 12px; font-weight: bold; }
         
-        /* Элементы списка */
         .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; position: relative; display: flex; flex-direction: column; cursor: grab; }
         .item:active { cursor: grabbing; opacity: 0.6; }
         
@@ -105,7 +103,6 @@
     firebase.initializeApp(config);
     db = firebase.database();
 
-    // Пароль и сессия
     document.getElementById('pass-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); checkPass(); } });
     function togglePass() { const i = document.getElementById('pass-input'); i.type = i.type === 'password' ? 'text' : 'password'; document.querySelector('.eye-btn').innerText = i.type === 'password' ? '👁️' : '🔓'; }
     async function checkPass() { const input = document.getElementById('pass-input').value; if(input === ADMIN_CODE) { document.getElementById('admin-overlay').style.display = 'flex'; return; } const snap = await db.ref('app_settings/password').once('value'); const activePass = snap.val() || "15081994"; if(input === activePass) { sessionStorage.setItem('master_session', 'active'); startApp(); } else alert("Неверный пароль"); }
@@ -113,7 +110,6 @@
     function startApp() { document.getElementById('lock-screen').style.display = 'none'; document.getElementById('main-content').style.display = 'block'; loadMatrix(); }
     if(sessionStorage.getItem('master_session') === 'active') startApp();
 
-    // Drag & Drop функции
     window.allowDrop = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
     window.dragLeave = (e) => { e.currentTarget.classList.remove('drag-over'); };
     window.handleDragStart = (e, key) => { e.dataTransfer.setData("text/plain", key); };
@@ -122,6 +118,35 @@
         e.currentTarget.classList.remove('drag-over');
         const key = e.dataTransfer.getData("text/plain");
         if(key) db.ref('matrix_v3/' + key).update({q: newQ});
+    };
+
+    // Глобальная функция Share
+    window.shareContent = async (text, fileData, fileName) => {
+        try {
+            if (fileData) {
+                // Превращаем Base64 в Blob
+                const res = await fetch(fileData);
+                const blob = await res.blob();
+                const file = new File([blob], fileName, { type: blob.type });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: fileName
+                    });
+                } else {
+                    alert("Браузер не поддерживает отправку этого файла. Попробуйте скачать его.");
+                }
+            } else {
+                if (navigator.share) {
+                    await navigator.share({ text: text });
+                } else {
+                    copyText(text);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     function loadMatrix() {
@@ -150,26 +175,25 @@
             snap.forEach(child => {
                 const v = child.val();
                 const isImg = v.f && v.t.match(/\.(jpeg|jpg|gif|png)$/i);
-                
                 const div = document.createElement('div'); 
                 div.className = 'item';
                 div.draggable = true;
                 div.ondragstart = (e) => handleDragStart(e, child.key);
                 div.onclick = (e) => { if(e.target === div) div.querySelector('.text-content').classList.toggle('expanded'); };
 
-                const delBtn = document.createElement('span'); delBtn.className = 'del-btn'; delBtn.textContent = '✕'; delBtn.onclick = () => del(child.key);
+                const delBtn = document.createElement('span'); delBtn.className = 'del-btn'; delBtn.textContent = '✕'; delBtn.onclick = (e) => { e.stopPropagation(); del(child.key); };
                 const titleEl = document.createElement('span'); titleEl.className = 'text-content'; titleEl.textContent = (v.f ? (isImg ? '🖼️ ':'📄 ') : '📌 ') + v.t;
                 
                 const actions = document.createElement('div'); actions.style.display = 'flex'; actions.style.flexWrap = 'wrap'; actions.style.gap = '10px';
                 let btns = '';
                 if(!v.f) {
                     btns += `<span class="action-btn" onclick="copyText(this.parentElement.parentElement.querySelector('.text-content').textContent.substring(2))">📋 Копия</span>`;
-                    btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareNote('${v.t.replace(/'/g, "\\'")}')">📤 Поделиться</span>`;
+                    btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareContent('${v.t.replace(/'/g, "\\'")}', null, '')">📤 Отправить</span>`;
                 } else {
                     if(!isImg) btns += `<span class="action-btn" onclick="openEditor('${child.key}')">✍️ Правка</span>`;
                     if(isImg) btns += `<span class="action-btn" style="color:#00ff00" onclick="viewPhoto('${v.f}')">👁️ Смотреть</span>`;
                     btns += `<a href="${v.f}" download="${v.t}" class="action-btn" style="text-decoration:none">💾 Скачать</a>`;
-                    btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareFile('${v.f}', '${v.t}')">📤 Отправить</span>`;
+                    btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareContent('', '${v.f}', '${v.t}')">📤 Отправить</span>`;
                 }
                 actions.innerHTML = btns;
                 div.append(delBtn, titleEl, actions); 
@@ -178,13 +202,11 @@
         });
     }
 
-    // Редактор кода
     window.editorSelectAll = () => { const a = document.getElementById('editor-area'); a.focus(); a.select(); };
     window.editorCopyAll = () => { navigator.clipboard.writeText(document.getElementById('editor-area').value); toast("Скопировано!"); };
     window.editorClear = () => { if(confirm("Очистить редактор?")) { document.getElementById('editor-area').value = ''; document.getElementById('editor-area').focus(); } };
-    
-    // Функции работы с данными
     window.addText = (q) => { const el = document.getElementById('in'+q); if(el.value.trim()) db.ref('matrix_v3').push({q, t: el.value}); el.value = ''; };
+
     window.upload = (q) => {
         const f = document.getElementById('f'+q).files[0];
         if(!f) return;

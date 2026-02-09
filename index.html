@@ -3,41 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Master Eisenhower Cloud</title>
+    <title>Master Cloud Matrix</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
-        .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; max-width: 900px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; max-width: 900px; margin-top: 15px; }
         @media (min-width: 768px) { .matrix { grid-template-columns: 1fr 1fr; } }
-        .quadrant { padding: 15px; border-radius: 12px; display: flex; flex-direction: column; min-height: 200px; background: #1e1e1e; border-top: 5px solid; }
+        .quadrant { padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; min-height: 200px; display: flex; flex-direction: column; }
         .q1 { border-color: #ff4d4d; } .q2 { border-color: #007bff; }
         .q3 { border-color: #ffc107; } .q4 { border-color: #28a745; }
-        .input-group { display: flex; gap: 5px; margin-bottom: 10px; }
-        input[type="text"] { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #2a2a2a; color: white; outline: none; }
-        .btn { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; padding: 10px; }
+        .input-group { display: flex; gap: 5px; margin-bottom: 15px; }
+        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; outline: none; }
+        button { cursor: pointer; border: none; border-radius: 8px; padding: 10px; font-weight: bold; }
         .add-btn { background: #fff; color: #000; }
-        .item { background: #2a2a2a; margin-bottom: 8px; padding: 10px; border-radius: 8px; border: 1px solid #333; }
-        .item-header { display: flex; justify-content: space-between; align-items: center; }
-        .delete-btn { color: #ff4d4d; background: none; border: none; cursor: pointer; font-size: 18px; }
-        .file-link { display: inline-block; color: #007bff; text-decoration: none; margin-top: 5px; font-size: 0.9rem; font-weight: bold; }
-        #status { font-size: 12px; color: #00ff00; margin-bottom: 10px; }
+        .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .file-link { color: #007bff; text-decoration: none; font-weight: bold; font-size: 14px; display: block; margin-top: 5px; }
+        #status { font-size: 12px; color: #00ff00; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <h2 style="margin: 10px 0;">☁️ Master Eisenhower Cloud</h2>
-    <div id="status">● Облако онлайн (Без пароля)</div>
+    <h2 style="margin: 10px 0;">☁️ Eisenhower Cloud Matrix</h2>
+    <div id="status">● Соединение с fail-21187 установлено</div>
 
     <div class="matrix">
         <div class="quadrant q1">
             <h3 style="color:#ff4d4d; margin:0 0 10px 0;">🔥 Срочно / Важно</h3>
             <div class="input-group">
-                <input type="text" id="in1" placeholder="Заметка или файл...">
-                <button class="btn" onclick="document.getElementById('f1').click()">📎</button>
-                <input type="file" id="f1" style="display:none" onchange="up(1)">
-                <button class="btn add-btn" onclick="add(1)">+</button>
+                <input type="text" id="in1" placeholder="Текст или файл...">
+                <button onclick="document.getElementById('f1').click()">📎</button>
+                <input type="file" id="f1" style="display:none" onchange="upload(1)">
+                <button class="add-btn" onclick="save(1)">+</button>
             </div>
             <div id="list1"></div>
         </div>
@@ -45,10 +43,10 @@
         <div class="quadrant q2">
             <h3 style="color:#007bff; margin:0 0 10px 0;">📅 Важно / Несрочно</h3>
             <div class="input-group">
-                <input type="text" id="in2" placeholder="Заметка...">
-                <button class="btn" onclick="document.getElementById('f2').click()">📎</button>
-                <input type="file" id="f2" style="display:none" onchange="up(2)">
-                <button class="btn add-btn" onclick="add(2)">+</button>
+                <input type="text" id="in2" placeholder="Текст или файл...">
+                <button onclick="document.getElementById('f2').click()">📎</button>
+                <input type="file" id="f2" style="display:none" onchange="upload(2)">
+                <button class="add-btn" onclick="save(2)">+</button>
             </div>
             <div id="list2"></div>
         </div>
@@ -56,10 +54,10 @@
         <div class="quadrant q3">
             <h3 style="color:#ffc107; margin:0 0 10px 0;">⚡ Срочно / Неважно</h3>
             <div class="input-group">
-                <input type="text" id="in3" placeholder="Заметка...">
-                <button class="btn" onclick="document.getElementById('f3').click()">📎</button>
-                <input type="file" id="f3" style="display:none" onchange="up(3)">
-                <button class="btn add-btn" onclick="add(3)">+</button>
+                <input type="text" id="in3" placeholder="Текст или файл...">
+                <button onclick="document.getElementById('f3').click()">📎</button>
+                <input type="file" id="f3" style="display:none" onchange="upload(3)">
+                <button class="add-btn" onclick="save(3)">+</button>
             </div>
             <div id="list3"></div>
         </div>
@@ -67,66 +65,66 @@
         <div class="quadrant q4">
             <h3 style="color:#28a745; margin:0 0 10px 0;">🌱 Неважно / Несрочно</h3>
             <div class="input-group">
-                <input type="text" id="in4" placeholder="Заметка...">
-                <button class="btn" onclick="document.getElementById('f4').click()">📎</button>
-                <input type="file" id="f4" style="display:none" onchange="up(4)">
-                <button class="btn add-btn" onclick="add(4)">+</button>
+                <input type="text" id="in4" placeholder="Текст или файл...">
+                <button onclick="document.getElementById('f4').click()">📎</button>
+                <input type="file" id="f4" style="display:none" onchange="upload(4)">
+                <button class="add-btn" onclick="save(4)">+</button>
             </div>
             <div id="list4"></div>
         </div>
     </div>
 
 <script>
-    // Твои настройки Firebase
+    // Твои настройки со скриншота №14
     const firebaseConfig = {
         apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc",
+        authDomain: "fail-21187.firebaseapp.com",
         databaseURL: "https://fail-21187-default-rtdb.firebaseio.com",
         projectId: "fail-21187",
+        storageBucket: "fail-21187.firebasestorage.app",
+        messagingSenderId: "621043286513",
         appId: "1:621043286513:web:dc826eaa4ddebb5cc14450"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Загрузка данных из интернета в реальном времени
-    db.ref('cloud_matrix').on('value', (snap) => {
+    // Слушаем базу в реальном времени
+    db.ref('master_matrix').on('value', (snap) => {
         [1,2,3,4].forEach(n => document.getElementById('list'+n).innerHTML = '');
         snap.forEach((child) => {
             const val = child.val();
             const div = document.createElement('div');
             div.className = 'item';
             div.innerHTML = `
-                <div class="item-header">
+                <div style="flex:1">
                     <span>${val.f ? '📄' : '📌'} ${val.t}</span>
-                    <button class="delete-btn" onclick="del('${child.key}')">✕</button>
+                    ${val.f ? `<a href="${val.f}" download="${val.t}" class="file-link">СКАЧАТЬ</a>` : ''}
                 </div>
-                ${val.f ? `<a href="${val.f}" download="${val.t}" class="file-link">СКАЧАТЬ ФАЙЛ</a>` : ''}
+                <button style="color:#ff4d4d; background:none; font-size:18px" onclick="del('${child.key}')">✕</button>
             `;
             document.getElementById('list' + val.q).prepend(div);
         });
     });
 
-    // Функция добавления текста
-    async function add(q) {
+    function save(q) {
         const t = document.getElementById('in'+q).value;
         if(!t) return;
-        await db.ref('cloud_matrix').push({ q, t });
+        db.ref('master_matrix').push({ q, t });
         document.getElementById('in'+q).value = '';
     }
 
-    // Функция загрузки файла в облако
-    function up(q) {
+    function upload(q) {
         const file = document.getElementById('f'+q).files[0];
         if(!file) return;
         const reader = new FileReader();
-        reader.onload = async (e) => {
-            await db.ref('cloud_matrix').push({ q, t: file.name, f: e.target.result });
+        reader.onload = (e) => {
+            db.ref('master_matrix').push({ q, t: file.name, f: e.target.result });
         };
         reader.readAsDataURL(file);
     }
 
-    // Удаление
-    function del(key) { if(confirm('Удалить из облака?')) db.ref('cloud_matrix/'+key).remove(); }
+    function del(key) { if(confirm('Удалить из облака?')) db.ref('master_matrix/'+key).remove(); }
 </script>
 </body>
 </html>

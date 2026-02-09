@@ -3,26 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Master Cloud Ultra</title>
+    <title>Master Cloud Ultra v8.2</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         #lock-screen { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .lock-box { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #333; text-align: center; width: 280px; }
+        .lock-box { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #333; text-align: center; width: 280px; position: relative; }
+        .pass-wrapper { position: relative; margin-bottom: 15px; }
+        .eye-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #666; cursor: pointer; font-size: 18px; padding: 5px; z-index: 5; }
         #main-content { display: none; width: 100%; max-width: 900px; }
-        .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
+        .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; width: 100%; }
         @media (min-width: 768px) { .matrix { grid-template-columns: 1fr 1fr; } }
-        .quadrant { padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; min-height: 200px; margin-bottom: 10px; }
+        .quadrant { padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; min-height: 200px; margin-bottom: 10px; position: relative; }
         .q1 { border-color: #ff4d4d; } .q2 { border-color: #007bff; }
         .q3 { border-color: #ffc107; } .q4 { border-color: #28a745; }
+        .clear-quadrant { position: absolute; top: 10px; right: 10px; color: #444; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        .clear-quadrant:hover { color: #ff4d4d; }
         input, textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #222; color: #fff; box-sizing: border-box; outline: none; }
         button { cursor: pointer; border: none; border-radius: 10px; padding: 12px; font-weight: bold; }
-        .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; }
-        .action-btn { color: #007bff; cursor: pointer; font-size: 12px; margin-right: 12px; font-weight: bold; text-transform: uppercase; }
-        #editor-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; padding: 20px; flex-direction: column; }
-        #editor-area { flex-grow: 1; font-family: monospace; font-size: 14px; margin: 15px 0; background: #000; color: #0f0; border: 1px solid #444; }
+        .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; position: relative; display: flex; flex-direction: column; }
+        .del-btn { position: absolute; top: 8px; left: 8px; color: #ff4d4d; font-weight: bold; cursor: pointer; font-size: 14px; z-index: 10; padding: 5px; }
+        .text-content { word-break: break-all; font-family: monospace; font-size: 13px; display: block; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin: 20px 0 10px 0; color: #ccc; }
+        .text-content.expanded { white-space: normal; overflow: visible; color: #fff; }
+        .action-btn { color: #007bff; cursor: pointer; font-size: 11px; margin-right: 12px; font-weight: bold; text-transform: uppercase; }
+        #editor-overlay, #viewer-overlay, #admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
+        #editor-area { flex-grow: 1; font-family: monospace; font-size: 14px; margin: 10px 0; background: #000; color: #0f0; border: 1px solid #444; width: 100%; }
+        #view-img { max-width: 100%; max-height: 80vh; border-radius: 10px; }
         .copy-notify { position: fixed; bottom: 20px; background: #28a745; padding: 10px 20px; border-radius: 20px; display: none; z-index: 10001; }
+        .editor-tools { display: flex; gap: 5px; width: 100%; margin-bottom: 5px; }
+        .tool-btn { flex: 1; font-size: 10px; background: #333; color: #fff; padding: 8px; }
     </style>
 </head>
 <body>
@@ -31,153 +41,126 @@
 
     <div id="lock-screen">
         <div class="lock-box">
-            <h2>Master Cloud</h2>
-            <input type="password" id="pass-input" placeholder="Пароль" style="text-align:center; margin-bottom:15px">
+            <h2 style="margin-top: 0;">Master Cloud</h2>
+            <div class="pass-wrapper">
+                <input type="password" id="pass-input" placeholder="Пароль" style="text-align:center;" autofocus>
+                <button type="button" class="eye-btn" onclick="togglePass()">👁️</button>
+            </div>
             <button onclick="checkPass()" style="width:100%; background:#fff; color:#000">ВОЙТИ</button>
+            <p onclick="openAdmin()" style="font-size:10px; color:#222; margin-top:20px; cursor:pointer">Secure Access</p>
         </div>
     </div>
 
+    <div id="admin-overlay"><div class="lock-box" style="background:#1a1a1a"><h3>Новый пароль</h3><input type="text" id="new-pass" placeholder="Пароль" style="margin-bottom:15px"><button onclick="updatePassword()" style="background:#28a745; color:#fff; width:100%">ОБНОВИТЬ</button><button onclick="closeModals()" style="background:none; color:#666; margin-top:10px">Отмена</button></div></div>
+    
     <div id="editor-overlay">
-        <h3 id="edit-title">Редактор</h3>
+        <h3 id="edit-title" style="margin:5px 0">Редактор кода</h3>
+        <div class="editor-tools">
+            <button class="tool-btn" onclick="editorSelectAll()">📑 ВЫДЕЛИТЬ ВСЁ</button>
+            <button class="tool-btn" onclick="editorCopyAll()">📋 КОПИРОВАТЬ</button>
+        </div>
         <textarea id="editor-area"></textarea>
-        <div style="display:flex; gap:10px">
+        <div style="display:flex; gap:10px; width:100%">
             <button onclick="saveEdit()" style="background:#28a745; color:#fff; flex:1">СОХРАНИТЬ</button>
-            <button onclick="closeEditor()" style="background:#444; color:#fff; flex:1">ЗАКРЫТЬ</button>
+            <button onclick="document.getElementById('editor-area').value=''" style="background:#ff4d4d; color:#fff; flex:0.5">ОЧИСТИТЬ</button>
+            <button onclick="closeModals()" style="background:#444; color:#fff; flex:1">ЗАКРЫТЬ</button>
         </div>
     </div>
+
+    <div id="viewer-overlay"><img id="view-img" src=""><br><button onclick="closeModals()" style="background:#fff; color:#000; width:200px">ЗАКРЫТЬ</button></div>
 
     <div id="main-content">
         <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0;">
             <h3 style="margin:0">Master Eisenhower ☁️</h3>
-            <button onclick="logout()" style="background:#ff4d4d; color:white; padding:5px 15px; border-radius: 5px;">ВЫХОД</button>
+            <button onclick="logout()" style="background:#ff4d4d; color:white; padding:5px 15px">ВЫХОД</button>
         </div>
-
         <div class="matrix">
-            <div class="quadrant q1"><h4 style="color:#ff4d4d; margin:0">🔥 СРОЧНО</h4><div id="ui1"></div><div id="list1"></div></div>
-            <div class="quadrant q2"><h4 style="color:#007bff; margin:0">📅 ВАЖНО</h4><div id="ui2"></div><div id="list2"></div></div>
-            <div class="quadrant q3"><h4 style="color:#ffc107; margin:0">⚡ ДЕЛЕГИРОВАТЬ</h4><div id="ui3"></div><div id="list3"></div></div>
-            <div class="quadrant q4"><h4 style="color:#28a745; margin:0">🌱 ЗАМЕТКИ</h4><div id="ui4"></div><div id="list4"></div></div>
+            <div class="quadrant q1"><h4 style="color:#ff4d4d; margin:0">🔥 СРОЧНО</h4><span class="clear-quadrant" onclick="clearQuadrant(1)">🗑️</span><div id="ui1"></div><div id="list1"></div></div>
+            <div class="quadrant q2"><h4 style="color:#007bff; margin:0">📅 ВАЖНО</h4><span class="clear-quadrant" onclick="clearQuadrant(2)">🗑️</span><div id="ui2"></div><div id="list2"></div></div>
+            <div class="quadrant q3"><h4 style="color:#ffc107; margin:0">⚡ СДЕЛАТЬ</h4><span class="clear-quadrant" onclick="clearQuadrant(3)">🗑️</span><div id="ui3"></div><div id="list3"></div></div>
+            <div class="quadrant q4"><h4 style="color:#28a745; margin:0">🌱 ЗАМЕТКИ</h4><span class="clear-quadrant" onclick="clearQuadrant(4)">🗑️</span><div id="ui4"></div><div id="list4"></div></div>
         </div>
     </div>
 
 <script>
-    const SECRET = "15081994";
-    let currentEditKey = null;
+    const ADMIN_CODE = "6739218";
+    let db;
+
+    const config = {
+        apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc",
+        databaseURL: "https://fail-21187-default-rtdb.firebaseio.com",
+        projectId: "fail-21187",
+        appId: "1:621043286513:web:dc826eaa4ddebb5cc14450"
+    };
+    firebase.initializeApp(config);
+    db = firebase.database();
 
     // Вход по ENTER
-    document.getElementById('pass-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') checkPass();
-    });
+    document.getElementById('pass-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPass(); });
 
-    function checkPass() {
-        if(document.getElementById('pass-input').value === SECRET) {
-            sessionStorage.setItem('master_session', 'active');
-            startApp();
-        } else {
-            alert("Неверный пароль");
-        }
+    function togglePass() {
+        const input = document.getElementById('pass-input');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        document.querySelector('.eye-btn').innerText = input.type === 'password' ? '👁️' : '🔓';
     }
 
-    function logout() {
-        sessionStorage.removeItem('master_session');
-        location.reload();
+    async function checkPass() {
+        const input = document.getElementById('pass-input').value;
+        if(input === ADMIN_CODE) { document.getElementById('admin-overlay').style.display = 'flex'; return; }
+        const snap = await db.ref('app_settings/password').once('value');
+        const activePass = snap.val() || "15081994";
+        if(input === activePass) { sessionStorage.setItem('master_session', 'active'); startApp(); } else alert("Неверный пароль");
     }
 
-    function startApp() {
-        document.getElementById('lock-screen').style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
-        initFirebase();
-    }
+    function logout() { sessionStorage.removeItem('master_session'); location.reload(); }
+    function startApp() { document.getElementById('lock-screen').style.display = 'none'; document.getElementById('main-content').style.display = 'block'; loadMatrix(); }
+    if(sessionStorage.getItem('master_session') === 'active') startApp();
 
-    // Проверка сессии (сохраняется пока открыт браузер)
-    if(sessionStorage.getItem('master_session') === 'active') {
-        startApp();
-    }
-
-    function initFirebase() {
-        const config = {
-            apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc",
-            databaseURL: "https://fail-21187-default-rtdb.firebaseio.com",
-            projectId: "fail-21187",
-            appId: "1:621043286513:web:dc826eaa4ddebb5cc14450"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(config);
-        const db = firebase.database();
-
+    function loadMatrix() {
         [1,2,3,4].forEach(n => {
-            document.getElementById('ui'+n).innerHTML = `
-                <div style="display:flex; gap:5px; margin:10px 0">
-                    <input type="text" id="in${n}" placeholder="Текст...">
-                    <button onclick="document.getElementById('f${n}').click()">📎</button>
-                    <input type="file" id="f${n}" style="display:none" onchange="upload(${n})">
-                    <button onclick="addText(${n})" style="background:#fff; color:#000; width:45px">+</button>
-                </div>`;
-            // Добавляем Enter для полей ввода текста
-            document.getElementById('in'+n).addEventListener('keypress', (e) => {
-                if(e.key === 'Enter') addText(n);
-            });
+            document.getElementById('ui'+n).innerHTML = `<div style="display:flex; gap:5px; margin:10px 0"><input type="text" id="in${n}" placeholder="Текст..."><button onclick="document.getElementById('f${n}').click()">📎</button><input type="file" id="f${n}" style="display:none" onchange="upload(${n})"><button onclick="addText(${n})" style="background:#fff; color:#000; width:45px">+</button></div>`;
+            document.getElementById('in'+n).addEventListener('keypress', (e) => { if(e.key === 'Enter') addText(n); });
         });
 
         db.ref('matrix_v3').on('value', snap => {
             [1,2,3,4].forEach(n => document.getElementById('list'+n).innerHTML = '');
             snap.forEach(child => {
                 const v = child.val();
+                const isImg = v.f && v.t.match(/\.(jpeg|jpg|gif|png)$/i);
                 const div = document.createElement('div');
                 div.className = 'item';
-                div.innerHTML = `
-                    <div style="margin-bottom:10px; word-break: break-all;"><b>${v.f ? '📄' : '📌'} ${v.t}</b></div>
-                    <div style="display:flex; flex-wrap: wrap; gap:10px;">
-                        ${!v.f ? `<span class="action-btn" onclick="copyText('${v.t.replace(/'/g, "\\'")}')">📋 Копия</span>` : ''}
-                        ${v.f ? `<span class="action-btn" onclick="openEditor('${child.key}')">✍️ Правка</span>` : ''}
-                        ${v.f ? `<a href="${v.f}" download="${v.t}" class="action-btn" style="text-decoration:none">💾 Скачать</a>` : ''}
-                        <span class="action-btn" style="color:#ff4d4d; margin-left:auto" onclick="del('${child.key}')">✕</span>
-                    </div>`;
+                const delBtn = document.createElement('span');
+                delBtn.className = 'del-btn'; delBtn.textContent = '✕'; delBtn.onclick = () => del(child.key);
+                const titleEl = document.createElement('span');
+                titleEl.className = 'text-content'; titleEl.textContent = (v.f ? (isImg ? '🖼️ ':'📄 ') : '📌 ') + v.t;
+                titleEl.onclick = function() { this.classList.toggle('expanded'); };
+                const actions = document.createElement('div');
+                actions.style.display = 'flex'; actions.style.flexWrap = 'wrap'; actions.style.gap = '10px'; actions.style.alignItems = 'center';
+                let btns = '';
+                if(!v.f) btns += `<span class="action-btn" onclick="copyText(this.parentElement.parentElement.querySelector('.text-content').textContent.substring(2))">📋 Копия</span>`;
+                if(v.f && !isImg) btns += `<span class="action-btn" onclick="openEditor('${child.key}')">✍️ Правка</span>`;
+                if(isImg) btns += `<span class="action-btn" style="color:#00ff00" onclick="viewPhoto('${v.f}')">👁️ Смотреть</span>`;
+                if(v.f) btns += `<a href="${v.f}" download="${v.t}" class="action-btn" style="text-decoration:none">💾 Скачать</a>`;
+                actions.innerHTML = btns;
+                div.appendChild(delBtn); div.appendChild(titleEl); div.appendChild(actions);
                 document.getElementById('list'+v.q).prepend(div);
             });
         });
-
-        window.addText = (q) => {
-            const el = document.getElementById('in'+q);
-            if(el.value) db.ref('matrix_v3').push({q, t: el.value});
-            el.value = '';
-        };
-
-        window.upload = (q) => {
-            const file = document.getElementById('f'+q).files[0];
-            const r = new FileReader();
-            r.onload = (e) => db.ref('matrix_v3').push({q, t: file.name, f: e.target.result});
-            r.readAsDataURL(file);
-        };
-
-        window.del = (k) => { if(confirm('Удалить?')) db.ref('matrix_v3/'+k).remove(); };
-
-        window.copyText = (txt) => {
-            navigator.clipboard.writeText(txt);
-            const toast = document.getElementById('copy-toast');
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 2000);
-        };
-
-        window.openEditor = (k) => {
-            currentEditKey = k;
-            db.ref('matrix_v3/'+k).once('value', s => {
-                try {
-                    const content = decodeURIComponent(escape(atob(s.val().f.split(',')[1])));
-                    document.getElementById('editor-area').value = content;
-                    document.getElementById('edit-title').innerText = "Файл: " + s.val().t;
-                    document.getElementById('editor-overlay').style.display = 'flex';
-                } catch(e) { alert("Нетекстовый формат"); }
-            });
-        };
-
-        window.saveEdit = () => {
-            const code = document.getElementById('editor-area').value;
-            const b64 = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(code)));
-            db.ref('matrix_v3/'+currentEditKey).update({f: b64});
-            closeEditor();
-        };
-        window.closeEditor = () => document.getElementById('editor-overlay').style.display = 'none';
     }
+
+    window.clearQuadrant = (q) => { if(confirm(`Очистить весь раздел?`)) { db.ref('matrix_v3').once('value', snap => { snap.forEach(child => { if(child.val().q === q) db.ref('matrix_v3/' + child.key).remove(); }); }); } };
+    window.editorSelectAll = () => { const a = document.getElementById('editor-area'); a.focus(); a.select(); };
+    window.editorCopyAll = () => { navigator.clipboard.writeText(document.getElementById('editor-area').value); document.getElementById('copy-toast').style.display='block'; setTimeout(()=>document.getElementById('copy-toast').style.display='none', 2000); };
+    window.addText = (q) => { const el = document.getElementById('in'+q); if(el.value) db.ref('matrix_v3').push({q, t: el.value}); el.value = ''; };
+    window.upload = (q) => { const file = document.getElementById('f'+q).files[0]; const r = new FileReader(); r.onload = (e) => db.ref('matrix_v3').push({q, t: file.name, f: e.target.result}); r.readAsDataURL(file); };
+    window.del = (k) => { if(confirm('Удалить?')) db.ref('matrix_v3/'+k).remove(); };
+    window.copyText = (txt) => { navigator.clipboard.writeText(txt); document.getElementById('copy-toast').style.display='block'; setTimeout(()=>document.getElementById('copy-toast').style.display='none', 2000); };
+    window.viewPhoto = (url) => { document.getElementById('view-img').src = url; document.getElementById('viewer-overlay').style.display = 'flex'; };
+    window.openEditor = (k) => { db.ref('matrix_v3/'+k).once('value', s => { try { document.getElementById('editor-area').value = decodeURIComponent(escape(atob(s.val().f.split(',')[1]))); window.currentEditKey = k; document.getElementById('editor-overlay').style.display = 'flex'; } catch(e){alert("Ошибка");} }); };
+    window.saveEdit = () => { const b64 = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(document.getElementById('editor-area').value))); db.ref('matrix_v3/'+window.currentEditKey).update({f: b64}); closeModals(); };
+    window.closeModals = () => { document.querySelectorAll('#editor-overlay, #viewer-overlay, #admin-overlay').forEach(el => el.style.display = 'none'); };
+    function openAdmin() { if(prompt("Admin Code:") === ADMIN_CODE) document.getElementById('admin-overlay').style.display = 'flex'; }
+    async function updatePassword() { const p = document.getElementById('new-pass').value; if(p.length > 0) { await db.ref('app_settings').update({password: p}); alert("OK"); location.reload(); } }
 </script>
 </body>
 </html>

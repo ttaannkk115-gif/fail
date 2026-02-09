@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Master Cloud Editor</title>
+    <title>Master Cloud Ultra</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
@@ -13,20 +13,21 @@
         #main-content { display: none; width: 100%; max-width: 900px; }
         .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
         @media (min-width: 768px) { .matrix { grid-template-columns: 1fr 1fr; } }
-        .quadrant { padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; min-height: 200px; }
+        .quadrant { padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; min-height: 200px; margin-bottom: 10px; }
         .q1 { border-color: #ff4d4d; } .q2 { border-color: #007bff; }
         .q3 { border-color: #ffc107; } .q4 { border-color: #28a745; }
         input, textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #222; color: #fff; box-sizing: border-box; outline: none; }
-        button { cursor: pointer; border: none; border-radius: 10px; padding: 12px; font-weight: bold; transition: 0.3s; }
+        button { cursor: pointer; border: none; border-radius: 10px; padding: 12px; font-weight: bold; }
         .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; }
-        .file-action { color: #007bff; cursor: pointer; font-weight: bold; font-size: 13px; margin-right: 10px; text-decoration: underline; }
-        
-        /* ОКНО РЕДАКТОРА */
-        #editor-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; padding: 20px; flex-direction: column; }
+        .action-btn { color: #007bff; cursor: pointer; font-size: 12px; margin-right: 12px; font-weight: bold; text-transform: uppercase; }
+        #editor-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; padding: 20px; flex-direction: column; }
         #editor-area { flex-grow: 1; font-family: monospace; font-size: 14px; margin: 15px 0; background: #000; color: #0f0; border: 1px solid #444; }
+        .copy-notify { position: fixed; bottom: 20px; background: #28a745; padding: 10px 20px; border-radius: 20px; display: none; z-index: 10001; }
     </style>
 </head>
 <body>
+
+    <div id="copy-toast" class="copy-notify">Текст скопирован!</div>
 
     <div id="lock-screen">
         <div class="lock-box">
@@ -46,16 +47,16 @@
     </div>
 
     <div id="main-content">
-        <div style="display:flex; justify-content:space-between; align-items:center">
-            <h3>Matrix Cloud Editor ☁️</h3>
-            <button onclick="logout()" style="background:#ff4d4d; color:white; padding:5px 15px">ВЫХОД</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0;">
+            <h3 style="margin:0">Master Eisenhower ☁️</h3>
+            <button onclick="logout()" style="background:#ff4d4d; color:white; padding:5px 15px; border-radius: 5px;">ВЫХОД</button>
         </div>
 
         <div class="matrix">
-            <div class="quadrant q1"><h4 style="color:#ff4d4d; margin:0">🔥 СРОЧНО</h4><div class="ui" id="ui1"></div><div id="list1"></div></div>
-            <div class="quadrant q2"><h4 style="color:#007bff; margin:0">📅 ВАЖНО</h4><div class="ui" id="ui2"></div><div id="list2"></div></div>
-            <div class="quadrant q3"><h4 style="color:#ffc107; margin:0">⚡ ДЕЛЕГИРОВАТЬ</h4><div class="ui" id="ui3"></div><div id="list3"></div></div>
-            <div class="quadrant q4"><h4 style="color:#28a745; margin:0">🌱 ЗАМЕТКИ</h4><div class="ui" id="ui4"></div><div id="list4"></div></div>
+            <div class="quadrant q1"><h4 style="color:#ff4d4d; margin:0">🔥 СРОЧНО</h4><div id="ui1"></div><div id="list1"></div></div>
+            <div class="quadrant q2"><h4 style="color:#007bff; margin:0">📅 ВАЖНО</h4><div id="ui2"></div><div id="list2"></div></div>
+            <div class="quadrant q3"><h4 style="color:#ffc107; margin:0">⚡ ДЕЛЕГИРОВАТЬ</h4><div id="ui3"></div><div id="list3"></div></div>
+            <div class="quadrant q4"><h4 style="color:#28a745; margin:0">🌱 ЗАМЕТКИ</h4><div id="ui4"></div><div id="list4"></div></div>
         </div>
     </div>
 
@@ -63,95 +64,119 @@
     const SECRET = "15081994";
     let currentEditKey = null;
 
+    // Вход по ENTER
+    document.getElementById('pass-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkPass();
+    });
+
     function checkPass() {
         if(document.getElementById('pass-input').value === SECRET) {
-            localStorage.setItem('master_auth', 'true');
-            location.reload();
+            sessionStorage.setItem('master_session', 'active');
+            startApp();
+        } else {
+            alert("Неверный пароль");
         }
     }
-    function logout() { localStorage.removeItem('master_auth'); location.reload(); }
 
-    if(localStorage.getItem('master_auth') === 'true') {
+    function logout() {
+        sessionStorage.removeItem('master_session');
+        location.reload();
+    }
+
+    function startApp() {
         document.getElementById('lock-screen').style.display = 'none';
         document.getElementById('main-content').style.display = 'block';
-        
-        const firebaseConfig = {
+        initFirebase();
+    }
+
+    // Проверка сессии (сохраняется пока открыт браузер)
+    if(sessionStorage.getItem('master_session') === 'active') {
+        startApp();
+    }
+
+    function initFirebase() {
+        const config = {
             apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc",
             databaseURL: "https://fail-21187-default-rtdb.firebaseio.com",
             projectId: "fail-21187",
             appId: "1:621043286513:web:dc826eaa4ddebb5cc14450"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(config);
         const db = firebase.database();
 
         [1,2,3,4].forEach(n => {
             document.getElementById('ui'+n).innerHTML = `
                 <div style="display:flex; gap:5px; margin:10px 0">
-                    <input type="text" id="in${n}" placeholder="+ текст">
+                    <input type="text" id="in${n}" placeholder="Текст...">
                     <button onclick="document.getElementById('f${n}').click()">📎</button>
                     <input type="file" id="f${n}" style="display:none" onchange="upload(${n})">
-                    <button onclick="addText(${n})" style="background:#fff; color:#000">+</button>
+                    <button onclick="addText(${n})" style="background:#fff; color:#000; width:45px">+</button>
                 </div>`;
+            // Добавляем Enter для полей ввода текста
+            document.getElementById('in'+n).addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') addText(n);
+            });
         });
 
-        db.ref('matrix_v2').on('value', snap => {
+        db.ref('matrix_v3').on('value', snap => {
             [1,2,3,4].forEach(n => document.getElementById('list'+n).innerHTML = '');
             snap.forEach(child => {
-                const val = child.val();
+                const v = child.val();
                 const div = document.createElement('div');
                 div.className = 'item';
                 div.innerHTML = `
-                    <div style="margin-bottom:8px"><b>${val.f ? '📄' : '📌'} ${val.t}</b></div>
-                    <div style="display:flex; justify-content:space-between">
-                        <div>
-                            ${val.f ? `<span class="file-action" onclick="openEditor('${child.key}')">РЕДАКТИРОВАТЬ</span>` : ''}
-                            ${val.f ? `<a href="${val.f}" download="${val.t}" class="file-action">СКАЧАТЬ</a>` : ''}
-                        </div>
-                        <span style="color:red; cursor:pointer" onclick="del('${child.key}')">УДАЛИТЬ</span>
+                    <div style="margin-bottom:10px; word-break: break-all;"><b>${v.f ? '📄' : '📌'} ${v.t}</b></div>
+                    <div style="display:flex; flex-wrap: wrap; gap:10px;">
+                        ${!v.f ? `<span class="action-btn" onclick="copyText('${v.t.replace(/'/g, "\\'")}')">📋 Копия</span>` : ''}
+                        ${v.f ? `<span class="action-btn" onclick="openEditor('${child.key}')">✍️ Правка</span>` : ''}
+                        ${v.f ? `<a href="${v.f}" download="${v.t}" class="action-btn" style="text-decoration:none">💾 Скачать</a>` : ''}
+                        <span class="action-btn" style="color:#ff4d4d; margin-left:auto" onclick="del('${child.key}')">✕</span>
                     </div>`;
-                document.getElementById('list'+val.q).prepend(div);
+                document.getElementById('list'+v.q).prepend(div);
             });
         });
 
         window.addText = (q) => {
-            const t = document.getElementById('in'+q).value;
-            if(t) db.ref('matrix_v2').push({q, t});
-            document.getElementById('in'+q).value = '';
+            const el = document.getElementById('in'+q);
+            if(el.value) db.ref('matrix_v3').push({q, t: el.value});
+            el.value = '';
         };
 
         window.upload = (q) => {
             const file = document.getElementById('f'+q).files[0];
-            const reader = new FileReader();
-            reader.onload = (e) => db.ref('matrix_v2').push({q, t: file.name, f: e.target.result, isText: true});
-            reader.readAsDataURL(file);
+            const r = new FileReader();
+            r.onload = (e) => db.ref('matrix_v3').push({q, t: file.name, f: e.target.result});
+            r.readAsDataURL(file);
         };
 
-        window.del = (k) => { if(confirm('Удалить?')) db.ref('matrix_v2/'+k).remove(); };
+        window.del = (k) => { if(confirm('Удалить?')) db.ref('matrix_v3/'+k).remove(); };
+
+        window.copyText = (txt) => {
+            navigator.clipboard.writeText(txt);
+            const toast = document.getElementById('copy-toast');
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2000);
+        };
 
         window.openEditor = (k) => {
             currentEditKey = k;
-            db.ref('matrix_v2/'+k).once('value', s => {
-                const data = s.val().f;
-                // Преобразуем Base64 обратно в текст
+            db.ref('matrix_v3/'+k).once('value', s => {
                 try {
-                    const content = decodeURIComponent(escape(atob(data.split(',')[1])));
+                    const content = decodeURIComponent(escape(atob(s.val().f.split(',')[1])));
                     document.getElementById('editor-area').value = content;
-                    document.getElementById('edit-title').innerText = "Правка: " + s.val().t;
+                    document.getElementById('edit-title').innerText = "Файл: " + s.val().t;
                     document.getElementById('editor-overlay').style.display = 'flex';
-                } catch(e) {
-                    alert("Этот формат нельзя редактировать как текст (только скачивание)");
-                }
+                } catch(e) { alert("Нетекстовый формат"); }
             });
         };
 
         window.saveEdit = () => {
-            const newContent = document.getElementById('editor-area').value;
-            const base64 = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(newContent)));
-            db.ref('matrix_v2/'+currentEditKey).update({f: base64});
+            const code = document.getElementById('editor-area').value;
+            const b64 = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(code)));
+            db.ref('matrix_v3/'+currentEditKey).update({f: b64});
             closeEditor();
         };
-
-        window.closeEditor = () => { document.getElementById('editor-overlay').style.display = 'none'; };
+        window.closeEditor = () => document.getElementById('editor-overlay').style.display = 'none';
     }
 </script>
 </body>

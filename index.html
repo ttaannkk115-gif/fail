@@ -3,128 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Master Cloud Matrix</title>
+    <title>Master Private Cloud</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; max-width: 900px; margin-top: 15px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        
+        /* Экран пароля */
+        #lock-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .lock-box { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #333; text-align: center; width: 100%; max-width: 300px; }
+        
+        /* Основной интерфейс */
+        #main-content { display: none; width: 100%; max-width: 900px; }
+        .matrix { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; margin-top: 15px; }
         @media (min-width: 768px) { .matrix { grid-template-columns: 1fr 1fr; } }
+        
         .quadrant { padding: 15px; border-radius: 15px; background: #111; border-top: 4px solid; min-height: 200px; display: flex; flex-direction: column; }
         .q1 { border-color: #ff4d4d; } .q2 { border-color: #007bff; }
         .q3 { border-color: #ffc107; } .q4 { border-color: #28a745; }
-        .input-group { display: flex; gap: 5px; margin-bottom: 15px; }
-        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; outline: none; }
-        button { cursor: pointer; border: none; border-radius: 8px; padding: 10px; font-weight: bold; }
-        .add-btn { background: #fff; color: #000; }
+        
+        input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #222; color: #fff; outline: none; box-sizing: border-box; }
+        button { cursor: pointer; border: none; border-radius: 10px; padding: 12px; font-weight: bold; }
+        .add-btn { background: #fff; color: #000; flex: 1; }
         .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .file-link { color: #007bff; text-decoration: none; font-weight: bold; font-size: 14px; display: block; margin-top: 5px; }
-        #status { font-size: 12px; color: #00ff00; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <h2 style="margin: 10px 0;">☁️ Eisenhower Cloud Matrix</h2>
-    <div id="status">● Соединение с fail-21187 установлено</div>
+    <div id="lock-screen">
+        <div class="lock-box">
+            <h2 style="margin-bottom:20px">Master Cloud</h2>
+            <input type="password" id="pass-input" placeholder="Введите пароль..." style="text-align:center; margin-bottom:15px">
+            <button onclick="checkPass()" style="width:100%; background:#fff; color:#000">ВОЙТИ</button>
+            <p id="err" style="color:red; font-size:12px; margin-top:10px"></p>
+        </div>
+    </div>
 
-    <div class="matrix">
-        <div class="quadrant q1">
-            <h3 style="color:#ff4d4d; margin:0 0 10px 0;">🔥 Срочно / Важно</h3>
-            <div class="input-group">
-                <input type="text" id="in1" placeholder="Текст или файл...">
-                <button onclick="document.getElementById('f1').click()">📎</button>
-                <input type="file" id="f1" style="display:none" onchange="upload(1)">
-                <button class="add-btn" onclick="save(1)">+</button>
-            </div>
-            <div id="list1"></div>
+    <div id="main-content">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+            <h2 style="margin:0">Eisenhower Matrix ☁️</h2>
+            <button onclick="logout()" style="background:red; color:white; padding:5px 10px; font-size:12px">ВЫХОД</button>
         </div>
 
-        <div class="quadrant q2">
-            <h3 style="color:#007bff; margin:0 0 10px 0;">📅 Важно / Несрочно</h3>
-            <div class="input-group">
-                <input type="text" id="in2" placeholder="Текст или файл...">
-                <button onclick="document.getElementById('f2').click()">📎</button>
-                <input type="file" id="f2" style="display:none" onchange="upload(2)">
-                <button class="add-btn" onclick="save(2)">+</button>
+        <div class="matrix">
+            <div class="quadrant q1">
+                <h3 style="color:#ff4d4d">🔥 Срочно / Важно</h3>
+                <div style="display:flex; gap:5px; margin-bottom:15px">
+                    <input type="text" id="in1" placeholder="Запись...">
+                    <button onclick="document.getElementById('f1').click()">📎</button>
+                    <input type="file" id="f1" style="display:none" onchange="upload(1)">
+                    <button class="add-btn" onclick="save(1)">+</button>
+                </div>
+                <div id="list1"></div>
             </div>
-            <div id="list2"></div>
-        </div>
 
-        <div class="quadrant q3">
-            <h3 style="color:#ffc107; margin:0 0 10px 0;">⚡ Срочно / Неважно</h3>
-            <div class="input-group">
-                <input type="text" id="in3" placeholder="Текст или файл...">
-                <button onclick="document.getElementById('f3').click()">📎</button>
-                <input type="file" id="f3" style="display:none" onchange="upload(3)">
-                <button class="add-btn" onclick="save(3)">+</button>
+            <div class="quadrant q2">
+                <h3 style="color:#007bff">📅 Важно / Несрочно</h3>
+                <div style="display:flex; gap:5px; margin-bottom:15px">
+                    <input type="text" id="in2" placeholder="Запись...">
+                    <button onclick="document.getElementById('f2').click()">📎</button>
+                    <input type="file" id="f2" style="display:none" onchange="upload(2)">
+                    <button class="add-btn" onclick="save(2)">+</button>
+                </div>
+                <div id="list2"></div>
             </div>
-            <div id="list3"></div>
-        </div>
 
-        <div class="quadrant q4">
-            <h3 style="color:#28a745; margin:0 0 10px 0;">🌱 Неважно / Несрочно</h3>
-            <div class="input-group">
-                <input type="text" id="in4" placeholder="Текст или файл...">
-                <button onclick="document.getElementById('f4').click()">📎</button>
-                <input type="file" id="f4" style="display:none" onchange="upload(4)">
-                <button class="add-btn" onclick="save(4)">+</button>
+            <div class="quadrant q3">
+                <h3 style="color:#ffc107">⚡ Срочно / Неважно</h3>
+                <div style="display:flex; gap:5px; margin-bottom:15px">
+                    <input type="text" id="in3" placeholder="Запись...">
+                    <button onclick="document.getElementById('f3').click()">📎</button>
+                    <input type="file" id="f3" style="display:none" onchange="upload(3)">
+                    <button class="add-btn" onclick="save(3)">+</button>
+                </div>
+                <div id="list3"></div>
             </div>
-            <div id="list4"></div>
+
+            <div class="quadrant q4">
+                <h3 style="color:#28a745">🌱 Неважно / Несрочно</h3>
+                <div style="display:flex; gap:5px; margin-bottom:15px">
+                    <input type="text" id="in4" placeholder="Запись...">
+                    <button onclick="document.getElementById('f4').click()">📎</button>
+                    <input type="file" id="f4" style="display:none" onchange="upload(4)">
+                    <button class="add-btn" onclick="save(4)">+</button>
+                </div>
+                <div id="list4"></div>
+            </div>
         </div>
     </div>
 
 <script>
-    // Твои настройки со скриншота №14
-    const firebaseConfig = {
-        apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc",
-        authDomain: "fail-21187.firebaseapp.com",
-        databaseURL: "https://fail-21187-default-rtdb.firebaseio.com",
-        projectId: "fail-21187",
-        storageBucket: "fail-21187.firebasestorage.app",
-        messagingSenderId: "621043286513",
-        appId: "1:621043286513:web:dc826eaa4ddebb5cc14450"
-    };
+    // ТВОЙ ПАРОЛЬ
+    const SECRET = "15081994";
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // Слушаем базу в реальном времени
-    db.ref('master_matrix').on('value', (snap) => {
-        [1,2,3,4].forEach(n => document.getElementById('list'+n).innerHTML = '');
-        snap.forEach((child) => {
-            const val = child.val();
-            const div = document.createElement('div');
-            div.className = 'item';
-            div.innerHTML = `
-                <div style="flex:1">
-                    <span>${val.f ? '📄' : '📌'} ${val.t}</span>
-                    ${val.f ? `<a href="${val.f}" download="${val.t}" class="file-link">СКАЧАТЬ</a>` : ''}
-                </div>
-                <button style="color:#ff4d4d; background:none; font-size:18px" onclick="del('${child.key}')">✕</button>
-            `;
-            document.getElementById('list' + val.q).prepend(div);
-        });
-    });
-
-    function save(q) {
-        const t = document.getElementById('in'+q).value;
-        if(!t) return;
-        db.ref('master_matrix').push({ q, t });
-        document.getElementById('in'+q).value = '';
+    function checkPass() {
+        const val = document.getElementById('pass-input').value;
+        if(val === SECRET) {
+            localStorage.setItem('master_auth', 'true');
+            initApp();
+        } else {
+            document.getElementById('err').innerText = "Неверный пароль!";
+        }
     }
 
-    function upload(q) {
-        const file = document.getElementById('f'+q).files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            db.ref('master_matrix').push({ q, t: file.name, f: e.target.result });
+    function logout() {
+        localStorage.removeItem('master_auth');
+        location.reload();
+    }
+
+    function initApp() {
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
+        startFirebase();
+    }
+
+    // Проверка при загрузке
+    if(localStorage.getItem('master_auth') === 'true') {
+        initApp();
+    }
+
+    function startFirebase() {
+        const firebaseConfig = {
+            apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc",
+            databaseURL: "https://fail-21187-default-rtdb.firebaseio.com",
+            projectId: "fail-21187",
+            appId: "1:621043286513:web:dc826eaa4ddebb5cc14450"
         };
-        reader.readAsDataURL(file);
-    }
 
-    function del(key) { if(confirm('Удалить из облака?')) db.ref('master_matrix/'+key).remove(); }
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        db.ref('cloud_matrix').on('value', (snap) => {
+            [1,2,3,4].forEach(n => document.getElementById('list'+n).innerHTML = '');
+            snap.forEach((child) => {
+                const val = child.val();
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `
+                    <div style="flex:1">
+                        <span>${val.f ? '📄' : '📌'} ${val.t}</span>
+                        ${val.f ? `<a href="${val.f}" download="${val.t}" class="file-link">СКАЧАТЬ</a>` : ''}
+                    </div>
+                    <button style="color:#ff4d4d; background:none; font-size:18px" onclick="del('${child.key}')">✕</button>
+                `;
+                document.getElementById('list' + val.q).prepend(div);
+            });
+        });
+
+        window.save = (q) => {
+            const t = document.getElementById('in'+q).value;
+            if(!t) return;
+            db.ref('cloud_matrix').push({ q, t });
+            document.getElementById('in'+q).value = '';
+        };
+
+        window.upload = (q) => {
+            const file = document.getElementById('f'+q).files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => db.ref('cloud_matrix').push({ q, t: file.name, f: e.target.result });
+            reader.readAsDataURL(file);
+        };
+
+        window.del = (key) => { if(confirm('Удалить?')) db.ref('cloud_matrix/'+key).remove(); };
+    }
 </script>
 </body>
 </html>

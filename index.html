@@ -25,25 +25,33 @@
         .clear-quadrant { color: #444; cursor: pointer; font-size: 18px; transition: 0.3s; }
         .clear-quadrant:hover { color: #ff4d4d; }
         .list-container { flex-grow: 1; overflow-y: auto; padding-right: 5px; margin-top: 10px; min-height: 50px; }
-        .list-container::-webkit-scrollbar { width: 4px; }
-        .list-container::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         
         textarea, input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #222; color: #fff; box-sizing: border-box; outline: none; font-family: inherit; }
         .matrix textarea { resize: none; min-height: 60px; font-size: 14px; }
         button { cursor: pointer; border: none; border-radius: 10px; padding: 12px; font-weight: bold; }
         
         .item { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #333; position: relative; display: flex; flex-direction: column; cursor: grab; }
-        .item:active { cursor: grabbing; opacity: 0.6; }
-        
         .del-btn { position: absolute; top: 8px; left: 8px; color: #ff4d4d; font-weight: bold; cursor: pointer; font-size: 14px; z-index: 10; padding: 5px; }
         .text-content { word-break: break-all; font-family: monospace; font-size: 13px; display: block; white-space: pre-wrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin: 20px 0 10px 0; color: #ccc; pointer-events: none; }
         .text-content.expanded { white-space: pre-wrap; overflow: visible; color: #fff; }
-        
         .action-btn { color: #007bff; cursor: pointer; font-size: 11px; margin-right: 12px; font-weight: bold; text-transform: uppercase; }
-        #editor-overlay, #viewer-overlay, #admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
-        #editor-area { flex-grow: 1; font-family: monospace; font-size: 14px; margin: 10px 0; background: #000; color: #0f0; border: 1px solid #444; width: 100%; }
-        .editor-tools { display: flex; gap: 5px; width: 100%; margin-bottom: 5px; }
-        .tool-btn { flex: 1; font-size: 10px; background: #333; color: #fff; padding: 8px; }
+
+        /* НОВЫЙ РЕДАКТОР В СТИЛЕ СТАРОГО */
+        #editor-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 9999; padding: 20px; flex-direction: column; }
+        .editor-container { display: flex; flex-grow: 1; background: #050505; border: 1px solid #333; position: relative; overflow: hidden; margin: 10px 0; border-radius: 8px; }
+        #line-numbers { width: 40px; background: #0a0a0a; color: #444; font-family: 'Consolas', monospace; font-size: 13px; padding: 12px 5px; text-align: right; border-right: 1px solid #222; line-height: 1.5; overflow: hidden; user-select: none; }
+        .code-wrapper { position: relative; flex-grow: 1; overflow: hidden; }
+        #editor-area, #highlighting-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0; padding: 12px; border: none; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.5; white-space: pre; tab-size: 4; box-sizing: border-box; overflow: auto; }
+        #editor-area { background: transparent; color: transparent; caret-color: #fff; z-index: 2; resize: none; outline: none; }
+        #highlighting-content { color: #ccc; z-index: 1; pointer-events: none; }
+        .hl-tag { color: #ff4d4d; } .hl-attr { color: #ffc107; } .hl-str { color: #28a745; }
+
+        /* ПРЕДПРОСМОТР */
+        #preview-overlay { display: none; position: fixed; inset: 0; background: #fff; z-index: 10002; flex-direction: column; }
+        #preview-frame { flex-grow: 1; border: none; width: 100%; }
+        .preview-header { background: #222; padding: 10px; display: flex; justify-content: space-between; align-items: center; color: white; }
+
+        #viewer-overlay, #admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
         .copy-notify { position: fixed; bottom: 20px; background: #28a745; padding: 10px 20px; border-radius: 20px; display: none; z-index: 10001; }
         .progress-bar-wrap { width: 100%; height: 4px; background: #222; border-radius: 2px; display: none; margin-bottom: 10px; overflow: hidden; }
         .progress-bar-fill { height: 100%; background: #007bff; width: 0%; transition: width 0.1s; }
@@ -69,16 +77,30 @@
 
 <div id="editor-overlay">
     <h3 id="edit-title" style="margin:5px 0">Редактор кода</h3>
-    <div class="editor-tools">
-        <button class="tool-btn" onclick="editorSelectAll()">📑 ВЫДЕЛИТЬ</button>
-        <button class="tool-btn" onclick="editorCopyAll()">📋 КОПИЯ</button>
-        <button class="tool-btn" style="background:#600;" onclick="editorClear()">🗑️ ОЧИСТИТЬ</button>
+    <div class="editor-tools" style="display:flex; gap:5px; margin-bottom:5px;">
+        <button class="tool-btn" style="flex:1; background:#333; color:#fff; padding:8px; font-size:10px;" onclick="editorCopyAll()">📋 КОПИЯ</button>
+        <button class="tool-btn" style="flex:1; background:#007bff; color:#fff; padding:8px; font-size:10px;" onclick="runCode()">🚀 ЗАПУСК</button>
+        <button class="tool-btn" style="flex:1; background:#600; color:#fff; padding:8px; font-size:10px;" onclick="editorClear()">🗑️ ОЧИСТИТЬ</button>
     </div>
-    <textarea id="editor-area"></textarea>
+    <div class="editor-container">
+        <div id="line-numbers">1</div>
+        <div class="code-wrapper">
+            <pre id="highlighting-content"><code id="highlighting-body"></code></pre>
+            <textarea id="editor-area" spellcheck="false" oninput="updateEditor()" onscroll="syncScroll()"></textarea>
+        </div>
+    </div>
     <div style="display:flex; gap:10px; width:100%">
         <button onclick="saveEdit()" style="background:#28a745; color:#fff; flex:1">СОХРАНИТЬ</button>
         <button onclick="closeModals()" style="background:#444; color:#fff; flex:1">ЗАКРЫТЬ</button>
     </div>
+</div>
+
+<div id="preview-overlay">
+    <div class="preview-header">
+        <button onclick="closePreview()" style="background:#555; color:white; padding:5px 15px;">← НАЗАД К КОДУ</button>
+        <button onclick="exitPreviewFull()" style="background:#ff4d4d; color:white; padding:5px 15px;">ЗАКРЫТЬ ВСЁ</button>
+    </div>
+    <iframe id="preview-frame"></iframe>
 </div>
 
 <div id="viewer-overlay"><img id="view-img" src="" style="max-width:90%; max-height:80vh; border-radius:10px;"><br><button onclick="closeModals()" style="background:#fff; color:#000; width:200px">ЗАКРЫТЬ</button></div>
@@ -98,72 +120,76 @@
 
 <script>
     const ADMIN_CODE = "6739218";
-    let db;
     const config = { apiKey: "AIzaSyAm7l3kLNaXW90TyN9gFS2pwfdseimErdc", databaseURL: "https://fail-21187-default-rtdb.firebaseio.com", projectId: "fail-21187", appId: "1:621043286513:web:dc826eaa4ddebb5cc14450" };
     firebase.initializeApp(config);
-    db = firebase.database();
+    const db = firebase.database();
 
-    document.getElementById('pass-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); checkPass(); } });
+    // ВОССТАНОВЛЕННЫЕ ФУНКЦИИ СТАРОЙ ВЕРСИИ
+    document.getElementById('pass-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkPass(); });
     function togglePass() { const i = document.getElementById('pass-input'); i.type = i.type === 'password' ? 'text' : 'password'; document.querySelector('.eye-btn').innerText = i.type === 'password' ? '👁️' : '🔓'; }
-    async function checkPass() { const input = document.getElementById('pass-input').value; if(input === ADMIN_CODE) { document.getElementById('admin-overlay').style.display = 'flex'; return; } const snap = await db.ref('app_settings/password').once('value'); const activePass = snap.val() || "15081994"; if(input === activePass) { sessionStorage.setItem('master_session', 'active'); startApp(); } else alert("Неверный пароль"); }
+    async function checkPass() { const input = document.getElementById('pass-input').value; if(input === ADMIN_CODE) { document.getElementById('admin-overlay').style.display = 'flex'; return; } const snap = await db.ref('app_settings/password').once('value'); if(input === (snap.val() || "15081994")) { sessionStorage.setItem('master_session', 'active'); startApp(); } else alert("Неверный пароль"); }
     function logout() { sessionStorage.removeItem('master_session'); location.reload(); }
     function startApp() { document.getElementById('lock-screen').style.display = 'none'; document.getElementById('main-content').style.display = 'block'; loadMatrix(); }
     if(sessionStorage.getItem('master_session') === 'active') startApp();
 
+    // DRAG N DROP
     window.allowDrop = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
     window.dragLeave = (e) => { e.currentTarget.classList.remove('drag-over'); };
     window.handleDragStart = (e, key) => { e.dataTransfer.setData("text/plain", key); };
-    window.handleDrop = (e, newQ) => {
-        e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
-        const key = e.dataTransfer.getData("text/plain");
-        if(key) db.ref('matrix_v3/' + key).update({q: newQ});
-    };
+    window.handleDrop = (e, newQ) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); const key = e.dataTransfer.getData("text/plain"); if(key) db.ref('matrix_v3/' + key).update({q: newQ}); };
 
-    // Глобальная функция Share
+    // EDITOR & PREVIEW
+    function updateEditor() {
+        const code = document.getElementById('editor-area').value;
+        const lines = code.split('\n').length;
+        document.getElementById('line-numbers').innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
+        let hl = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/(&lt;\/?[a-z1-6]+)/gi, '<span class="hl-tag">$1</span>')
+            .replace(/([a-z-]+)(?==)/gi, '<span class="hl-attr">$1</span>')
+            .replace(/"(.*?)"/g, '<span class="hl-str">"$1"</span>');
+        document.getElementById('highlighting-body').innerHTML = hl;
+    }
+    function syncScroll() {
+        const a = document.getElementById('editor-area');
+        const c = document.getElementById('highlighting-content');
+        const n = document.getElementById('line-numbers');
+        c.scrollTop = n.scrollTop = a.scrollTop; c.scrollLeft = a.scrollLeft;
+    }
+    window.runCode = () => {
+        const code = document.getElementById('editor-area').value;
+        document.getElementById('preview-overlay').style.display = 'flex';
+        const doc = document.getElementById('preview-frame').contentDocument;
+        doc.open(); doc.write(code); doc.close();
+    };
+    window.closePreview = () => { document.getElementById('preview-overlay').style.display = 'none'; };
+    window.exitPreviewFull = () => { closePreview(); closeModals(); };
+
+    // SHARE
     window.shareContent = async (text, fileData, fileName) => {
         try {
             if (fileData) {
-                // Превращаем Base64 в Blob
-                const res = await fetch(fileData);
-                const blob = await res.blob();
+                const res = await fetch(fileData); const blob = await res.blob();
                 const file = new File([blob], fileName, { type: blob.type });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: fileName
-                    });
-                } else {
-                    alert("Браузер не поддерживает отправку этого файла. Попробуйте скачать его.");
-                }
-            } else {
-                if (navigator.share) {
-                    await navigator.share({ text: text });
-                } else {
-                    copyText(text);
-                }
-            }
-        } catch (err) {
-            console.error(err);
-        }
+                if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: fileName });
+            } else if (navigator.share) await navigator.share({ text: text });
+            else copyText(text);
+        } catch (err) { console.error(err); }
     };
 
+    // MATRIX LOGIC
     function loadMatrix() {
         const titles = ["СРОЧНО", "ВАЖНО", "СДЕЛАТЬ", "ЗАМЕТКИ"];
         const colors = ["#ff4d4d", "#007bff", "#ffc107", "#28a745"];
         [1,2,3,4].forEach(n => {
             document.getElementById('q-cont-'+n).innerHTML = `
                 <div class="q-header"><h4 style="color:${colors[n-1]}; margin:0">${titles[n-1]}</h4><span class="clear-quadrant" onclick="clearQuadrant(${n})">🗑️</span></div>
-                <div id="ui${n}">
-                    <div style="display:flex; flex-direction:column; gap:5px; margin:10px 0">
-                        <textarea id="in${n}" placeholder="Текст...\n(Shift+Enter для сохранения)"></textarea>
-                        <div class="progress-bar-wrap" id="pbw${n}"><div class="progress-bar-fill" id="pbf${n}"></div></div>
-                        <div style="display:flex; gap:5px">
-                            <button id="btn-file${n}" onclick="document.getElementById('f${n}').click()" style="flex:1">📎</button>
-                            <input type="file" id="f${n}" style="display:none" onchange="upload(${n})">
-                            <button id="btn-add${n}" onclick="addText(${n})" style="background:#fff; color:#000; flex:2">+</button>
-                        </div>
+                <div style="display:flex; flex-direction:column; gap:5px; margin:10px 0">
+                    <textarea id="in${n}" placeholder="Текст...\n(Shift+Enter)"></textarea>
+                    <div class="progress-bar-wrap" id="pbw${n}"><div class="progress-bar-fill" id="pbf${n}"></div></div>
+                    <div style="display:flex; gap:5px">
+                        <button onclick="document.getElementById('f${n}').click()" style="flex:1">📎</button>
+                        <input type="file" id="f${n}" style="display:none" onchange="upload(${n})">
+                        <button onclick="addText(${n})" style="background:#fff; color:#000; flex:2">+</button>
                     </div>
                 </div>
                 <div id="list${n}" class="list-container"></div>`;
@@ -175,66 +201,48 @@
             snap.forEach(child => {
                 const v = child.val();
                 const isImg = v.f && v.t.match(/\.(jpeg|jpg|gif|png)$/i);
-                const div = document.createElement('div'); 
-                div.className = 'item';
-                div.draggable = true;
+                const div = document.createElement('div'); div.className = 'item'; div.draggable = true;
                 div.ondragstart = (e) => handleDragStart(e, child.key);
                 div.onclick = (e) => { if(e.target === div) div.querySelector('.text-content').classList.toggle('expanded'); };
 
-                const delBtn = document.createElement('span'); delBtn.className = 'del-btn'; delBtn.textContent = '✕'; delBtn.onclick = (e) => { e.stopPropagation(); del(child.key); };
-                const titleEl = document.createElement('span'); titleEl.className = 'text-content'; titleEl.textContent = (v.f ? (isImg ? '🖼️ ':'📄 ') : '📌 ') + v.t;
-                
-                const actions = document.createElement('div'); actions.style.display = 'flex'; actions.style.flexWrap = 'wrap'; actions.style.gap = '10px';
-                let btns = '';
-                if(!v.f) {
-                    btns += `<span class="action-btn" onclick="copyText(this.parentElement.parentElement.querySelector('.text-content').textContent.substring(2))">📋 Копия</span>`;
-                    btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareContent('${v.t.replace(/'/g, "\\'")}', null, '')">📤 Отправить</span>`;
-                } else {
+                let btns = `<div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px;">`;
+                if(v.f) {
                     if(!isImg) btns += `<span class="action-btn" onclick="openEditor('${child.key}')">✍️ Правка</span>`;
-                    if(isImg) btns += `<span class="action-btn" style="color:#00ff00" onclick="viewPhoto('${v.f}')">👁️ Смотреть</span>`;
+                    if(isImg) btns += `<span class="action-btn" style="color:#0f0" onclick="viewPhoto('${v.f}')">👁️ Смотреть</span>`;
                     btns += `<a href="${v.f}" download="${v.t}" class="action-btn" style="text-decoration:none">💾 Скачать</a>`;
                     btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareContent('', '${v.f}', '${v.t}')">📤 Отправить</span>`;
+                } else {
+                    btns += `<span class="action-btn" onclick="copyText('${v.t.replace(/'/g, "\\'")}')">📋 Копия</span>`;
+                    btns += `<span class="action-btn" style="color:#ff00ff" onclick="shareContent('${v.t.replace(/'/g, "\\'")}', null, '')">📤 Отправить</span>`;
                 }
-                actions.innerHTML = btns;
-                div.append(delBtn, titleEl, actions); 
+                btns += `</div>`;
+
+                div.innerHTML = `<span class="del-btn" onclick="del('${child.key}')">✕</span><span class="text-content">${(v.f?'📄 ':'📌 ')+v.t}</span>` + btns;
                 document.getElementById('list'+v.q).prepend(div);
             });
         });
     }
 
-    window.editorSelectAll = () => { const a = document.getElementById('editor-area'); a.focus(); a.select(); };
-    window.editorCopyAll = () => { navigator.clipboard.writeText(document.getElementById('editor-area').value); toast("Скопировано!"); };
-    window.editorClear = () => { if(confirm("Очистить редактор?")) { document.getElementById('editor-area').value = ''; document.getElementById('editor-area').focus(); } };
     window.addText = (q) => { const el = document.getElementById('in'+q); if(el.value.trim()) db.ref('matrix_v3').push({q, t: el.value}); el.value = ''; };
-
     window.upload = (q) => {
-        const f = document.getElementById('f'+q).files[0];
-        if(!f) return;
-        const r = new FileReader();
-        const wrap = document.getElementById('pbw'+q);
-        const fill = document.getElementById('pbf'+q);
-        wrap.style.display = 'block';
+        const f = document.getElementById('f'+q).files[0]; if(!f) return;
+        const r = new FileReader(); const fill = document.getElementById('pbf'+q); document.getElementById('pbw'+q).style.display = 'block';
         r.onprogress = (e) => { if(e.lengthComputable) fill.style.width = (e.loaded / e.total * 100) + '%'; };
-        r.onload = (e) => {
-            db.ref('matrix_v3').push({q, t: f.name, f: e.target.result}, () => {
-                wrap.style.display = 'none';
-                fill.style.width = '0%';
-                document.getElementById('f'+q).value = '';
-            });
-        };
+        r.onload = (e) => { db.ref('matrix_v3').push({q, t: f.name, f: e.target.result}, () => { document.getElementById('pbw'+q).style.display = 'none'; fill.style.width = '0%'; }); };
         r.readAsDataURL(f);
     };
-
     window.del = (k) => { if(confirm('Удалить?')) db.ref('matrix_v3/'+k).remove(); };
     window.copyText = (txt) => { navigator.clipboard.writeText(txt); toast("Скопировано!"); };
     function toast(m) { const t = document.getElementById('copy-toast'); t.textContent = m; t.style.display='block'; setTimeout(()=>t.style.display='none', 2000); }
     window.viewPhoto = (url) => { document.getElementById('view-img').src = url; document.getElementById('viewer-overlay').style.display = 'flex'; };
-    window.openEditor = (k) => { db.ref('matrix_v3/'+k).once('value', s => { try { document.getElementById('editor-area').value = decodeURIComponent(escape(atob(s.val().f.split(',')[1]))); window.currentEditKey = k; document.getElementById('editor-overlay').style.display = 'flex'; } catch(e){alert("Ошибка при открытии");} }); };
+    window.openEditor = (k) => { db.ref('matrix_v3/'+k).once('value', s => { try { document.getElementById('editor-area').value = decodeURIComponent(escape(atob(s.val().f.split(',')[1]))); window.currentEditKey = k; document.getElementById('editor-overlay').style.display = 'flex'; updateEditor(); } catch(e){alert("Ошибка");} }); };
     window.saveEdit = () => { const b64 = "data:text/plain;base64," + btoa(unescape(encodeURIComponent(document.getElementById('editor-area').value))); db.ref('matrix_v3/'+window.currentEditKey).update({f: b64}); closeModals(); };
-    window.closeModals = () => { document.querySelectorAll('#editor-overlay, #viewer-overlay, #admin-overlay').forEach(el => el.style.display = 'none'); };
+    window.closeModals = () => { document.querySelectorAll('#editor-overlay, #viewer-overlay, #admin-overlay, #preview-overlay').forEach(el => el.style.display = 'none'); };
+    window.editorCopyAll = () => { navigator.clipboard.writeText(document.getElementById('editor-area').value); toast("Скопировано!"); };
+    window.editorClear = () => { if(confirm("Очистить?")) { document.getElementById('editor-area').value = ''; updateEditor(); } };
+    window.clearQuadrant = (q) => { if(confirm(`Очистить раздел?`)) { db.ref('matrix_v3').once('value', snap => { snap.forEach(child => { if(child.val().q === q) db.ref('matrix_v3/' + child.key).remove(); }); }); } };
     function openAdmin() { if(prompt("Admin Code:") === ADMIN_CODE) document.getElementById('admin-overlay').style.display = 'flex'; }
-    async function updatePassword() { const p = document.getElementById('new-pass').value; if(p.length > 0) { await db.ref('app_settings').update({password: p}); alert("OK"); location.reload(); } }
-    window.clearQuadrant = (q) => { if(confirm(`Очистить весь раздел?`)) { db.ref('matrix_v3').once('value', snap => { snap.forEach(child => { if(child.val().q === q) db.ref('matrix_v3/' + child.key).remove(); }); }); } };
+    async function updatePassword() { const p = document.getElementById('new-pass').value; if(p) { await db.ref('app_settings').update({password: p}); alert("OK"); location.reload(); } }
 </script>
 </body>
 </html>
